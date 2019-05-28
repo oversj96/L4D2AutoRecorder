@@ -4,10 +4,17 @@ import time
 import zipfile
 import os
 import tkinter as tk
+import logging
 from pathlib import Path
 from datetime import datetime
 from tkinter import filedialog
 from tkinter import messagebox
+
+logging.basicConfig(
+    filename="debug.log", 
+    level=logging.DEBUG,
+    format="%(asctime)s:%(levelname)s:%(message)s"
+    )
 
 root = tk.Tk()
 root.withdraw()
@@ -32,10 +39,10 @@ while need_path:
                 exit(0)
             else:
                 messagebox.showerror(
-                "Invalid File",
-                "The file selected was incorrect. Try again.")
+                    "Invalid File",
+                    "The file selected was incorrect. Try again.")
                 continue
-            
+
     else:
         with open("pathinfo.txt", "r") as path:
             path_to_exe = path.read()
@@ -44,26 +51,35 @@ while need_path:
 path_to_l4d2 = path_to_exe + "left4dead2/"
 path_to_demos = path_to_l4d2 + "demos/"
 
+logging.debug("Path to exe was set to: {}".format(path_to_exe))
+logging.debug("Path to l4d2 was set to: {}".format(path_to_l4d2))
+logging.debug("Path to demos was set to: {}".format(path_to_demos))
+
 if (not os.path.isdir(path_to_demos)):
     os.makedirs(path_to_demos)
+    logging.debug("Path to demos did not exist. Path was created.")
 
 autoexec_path = Path(path_to_l4d2 + "cfg/autoexec.cfg")
 with open(autoexec_path, "a") as autoexec:
     autoexec.write("alias +showexec \"+showscores;"
-                    + " exec L4D2AutoRecorder.cfg\"; alias -showexec"
-                    + " \"-showscores\"; bind TAB +showexec")
+                   + " exec L4D2AutoRecorder.cfg\"; alias -showexec"
+                   + " \"-showscores\"; bind TAB +showexec")
 
 
 subprocess.Popen("start steam://rungameid/550", shell=True)
 
-time.sleep(5)
+logging.debug("attempted to start Left 4 Dead 2 via"
+              + " 'start' steam id on the shell")
+
+time.sleep(1)
 
 pythons_psutil = []
 
 
 def wrap_left4dead2_demos(p):
     zip_count = 0
-    print("Waiting to see if left4dead2.exe still exists...")
+    print("PLEASE DO NOT CLOSE THIS WINDOW UNLESS"
+          + " IT HAS BEEN SOME TIME SINCE L4D2 HAS QUIT.")
     while (psutil.pid_exists(p.pid)):
         with open(
                 path_to_exe
@@ -71,9 +87,14 @@ def wrap_left4dead2_demos(p):
             cfg.write(
                 "record demo_"
                 + str(datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
-        time.sleep(0.25)      
+            logging.debug("Wrote new time to l4d2 cfg.")
+        time.sleep(1)
     today = str(datetime.now().strftime('%Y-%m-%d'))
+    logging.debug("Today was set to: {}".format(today))
     file_list = os.listdir(path_to_l4d2)
+    logging.debug("List of files in Left 4 Dead 2/left4dead2 directory:")
+    for file in file_list:
+        logging.debug("\t{}".format(file))
 
     if len(file_list):
         zipfile_list = []
@@ -85,6 +106,7 @@ def wrap_left4dead2_demos(p):
                 date = strings[1]
                 if (date == today):
                     zipfile_list.append(file)
+                    logging.debug("{} added to zip list.".format(file))
         if len(zipfile_list):
             with zipfile.ZipFile(
                     path_to_demos
@@ -94,11 +116,10 @@ def wrap_left4dead2_demos(p):
                     myzip.write(path_to_l4d2 + zfile, zfile)
                     os.remove(path_to_l4d2 + zfile)
                     zip_count += 1
-                    
-    messagebox.showinfo(
-        "Demo Management", str(zip_count)
-        + " files were recorded and zipped\n"
-        + "to \"" + path_to_demos + "\".")
+            messagebox.showinfo(
+                "Demo Management", str(zip_count)
+                + " files were recorded and zipped\n"
+                + "to \"" + path_to_demos + "\".")
 
 
 for p in psutil.process_iter():
@@ -106,10 +127,11 @@ for p in psutil.process_iter():
         if p.name() == 'left4dead2.exe':
             wrap_left4dead2_demos(p)
 
-            # Found this nice piece of code of deleting the last
-            # line in large files on stackoverflow. kudos to Saqib
+            # Found this nice piece of code for deleting the last
+            # line in large files on stackoverflow. kudos to Saqib and co
             # This code is to remove the AutoRecorder command that was
             # appended to the end of the autoexec.cfg at startup
+            logging.debug("Deleting progammatically added line from autoexec...")
             with open(autoexec_path, "r+") as file:
                 file.seek(0, os.SEEK_END)
                 pos = file.tell() - 1
@@ -119,6 +141,6 @@ for p in psutil.process_iter():
                 if pos > 0:
                     file.seek(pos, os.SEEK_SET)
                     file.truncate()
-
+            logging.debug("Line deleted.")
     except psutil.Error:
         pass
