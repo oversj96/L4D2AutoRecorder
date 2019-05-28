@@ -26,11 +26,16 @@ while need_path:
             with open("pathinfo.txt", "w") as path:
                 path.write(path_to_exe)
                 need_path = False
+
         else:
-            messagebox.showerror(
+            if (path_to_exe == ''):
+                exit(0)
+            else:
+                messagebox.showerror(
                 "Invalid File",
                 "The file selected was incorrect. Try again.")
-            continue
+                continue
+            
     else:
         with open("pathinfo.txt", "r") as path:
             path_to_exe = path.read()
@@ -42,20 +47,11 @@ path_to_demos = path_to_l4d2 + "demos/"
 if (not os.path.isdir(path_to_demos)):
     os.makedirs(path_to_demos)
 
-try:
-    autoexec_path = Path(path_to_l4d2 + "cfg/autoexec.cfg")
-    my_abs_path = autoexec_path.resolve(strict=True)
-except FileNotFoundError:
-    messagebox.showerror(
-        "File Not Found",
-        "Could not find \"" + path_to_l4d2 + "cfg/autoexec.cfg\"."
-        + " Please verify left 4 dead 2 game files.")
-    exit(1)
-else:
-    with open(autoexec_path, "a") as autoexec:
-        autoexec.write("alias +showexec \"+showscores;"
-                       + " exec L4D2AutoRecorder.cfg\"; alias -showexec"
-                       + " \"-showscores\"; bind TAB +showexec")
+autoexec_path = Path(path_to_l4d2 + "cfg/autoexec.cfg")
+with open(autoexec_path, "a") as autoexec:
+    autoexec.write("alias +showexec \"+showscores;"
+                    + " exec L4D2AutoRecorder.cfg\"; alias -showexec"
+                    + " \"-showscores\"; bind TAB +showexec")
 
 
 subprocess.Popen("start steam://rungameid/550", shell=True)
@@ -75,7 +71,7 @@ def wrap_left4dead2_demos(p):
             cfg.write(
                 "record demo_"
                 + str(datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
-        time.sleep(20)      
+        time.sleep(0.25)      
     today = str(datetime.now().strftime('%Y-%m-%d'))
     file_list = os.listdir(path_to_l4d2)
 
