@@ -26,22 +26,17 @@ def wrap_left4dead2_demos(p):
     Automates writing new demo file names to a cfg and manages
     the demos after game exit.
     """
-    last_write = 0.25
     print("PLEASE DO NOT CLOSE THIS WINDOW UNLESS"
           + " IT HAS BEEN SOME TIME SINCE L4D2 HAS QUIT.")
+    
     while (psutil.pid_exists(p.pid)):
-        with open(
-                path_to_exe
-                + "left4dead2\cfg\L4D2AutoRecorder.cfg", "w") as cfg:
-
-            if (last_write == 10):
-                cfg.write(
-                    "record demo_"
-                    + str(datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
-                logging.debug("Wrote new time to l4d2 cfg.")
-                last_write = 0.25
-        time.sleep(0.25)
-        last_write += 0.25
+        with open(path_to_record_cfg, "w") as cfg:
+            stamp = str(datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+            cfg.write("record demo_{}".format(stamp))
+            logging.debug("Wrote time \"{}\" to l4d2 cfg.".format(stamp))
+            last_write = 0.25
+            cfg.close()
+            time.sleep(2)
 
 
 def shutdown_recorder(status, message="", show=False):
@@ -141,6 +136,7 @@ while need_path:
 
 path_to_l4d2 = path_to_exe + "left4dead2/"
 path_to_demos = path_to_l4d2 + "demos/"
+path_to_record_cfg = path_to_l4d2 + "cfg/L4D2AutoRecorder.cfg"
 
 logging.debug("Path to exe was set to: {}".format(path_to_exe))
 logging.debug("Path to l4d2 was set to: {}".format(path_to_l4d2))
@@ -166,9 +162,9 @@ else:
     with open(flag_path, "w") as flag:
         logging.debug("Startup flag successfully created.")
 
-cfg_command = "alias +showexec \"+showscores;" \
-    + " exec L4D2AutoRecorder.cfg\"; alias -showexec" \
-    + " \"-showscores\"; bind TAB +showexec"
+cfg_command = "alias +showexec \"+showscores;" + \
+    " exec L4D2AutoRecorder.cfg\"; alias -showexec" + \
+    " \"-showscores\"; bind TAB +showexec;"
 
 exec_temp = []
 with open(autoexec_path, "r") as autoexec:
@@ -179,7 +175,7 @@ with open(autoexec_path, "r") as autoexec:
 with open(autoexec_path, "w") as autoexec:
     for line in exec_temp:
         autoexec.write("{}\n".format(line))
-            
+
 subprocess.Popen("start steam://rungameid/550", shell=True)
 
 logging.debug("attempted to start Left 4 Dead 2 via"
