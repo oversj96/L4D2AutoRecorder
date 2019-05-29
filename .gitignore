@@ -4,3 +4,4 @@ build/
 dist/
 __pycache__
 L4D2AutoRecorder.spec
+__autorecorder_flag

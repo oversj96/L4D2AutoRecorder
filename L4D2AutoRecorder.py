@@ -23,10 +23,9 @@ need_path = True
 
 def wrap_left4dead2_demos(p):
     """
-    Automates writing new demo file names to a cfg and manages 
-    the demos after game exit. 
+    Automates writing new demo file names to a cfg and manages
+    the demos after game exit.
     """
-    zip_count = 0
     last_write = 0.25
     print("PLEASE DO NOT CLOSE THIS WINDOW UNLESS"
           + " IT HAS BEEN SOME TIME SINCE L4D2 HAS QUIT.")
@@ -35,13 +34,40 @@ def wrap_left4dead2_demos(p):
                 path_to_exe
                 + "left4dead2\cfg\L4D2AutoRecorder.cfg", "w") as cfg:
 
-            if (last_write % 10 == 0):       
+            if (last_write == 10):
                 cfg.write(
                     "record demo_"
                     + str(datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
-                logging.debug("Wrote new time to l4d2 cfg.")              
+                logging.debug("Wrote new time to l4d2 cfg.")
+                last_write = 0.25
         time.sleep(0.25)
         last_write += 0.25
+
+
+def shutdown_recorder(status, message="", show=False):
+    """
+    The primary method of exiting the application if
+    needed by user or caused by an unexpected error.
+    """
+    if (message is not ""):
+        logging.debug(("Recorder was shut down with status: {}. "
+                       + "\"{}\"").format(status, message))
+    else:
+        logging.debug("Recorder was shut down with status: {}".format(status))
+
+    if (show):
+        messagebox.showerror("Error", "{}".format(message))
+
+    os._exit(status)
+
+
+def move_and_archive(verbose=False):
+    """
+    Tells the AutoRecorder to look for demo files and to
+    move them to their respective zip folders inside the demos
+    directory.
+    """
+    zip_count = 0
     today = str(datetime.now().strftime('%Y-%m-%d'))
     logging.debug("Today was set to: {}".format(today))
     file_list = os.listdir(path_to_l4d2)
@@ -69,27 +95,30 @@ def wrap_left4dead2_demos(p):
                     myzip.write(path_to_l4d2 + zfile, zfile)
                     os.remove(path_to_l4d2 + zfile)
                     zip_count += 1
-            messagebox.showinfo(
-                "Demo Management", str(zip_count)
-                + " files were recorded and zipped\n"
-                + "to \"" + path_to_demos + "\".")
+            if (verbose):
+                messagebox.showinfo(
+                    "Demo Management", str(zip_count)
+                    + " files were recorded and zipped\n"
+                    + "to \"" + path_to_demos + "\".")
 
 
-def shutdown_recorder(status, message=""):
-    """
-    The primary method of exiting the application if 
-    needed by user or caused by an unexpected error. 
-    """
-    if (message is not ""):
-        logging.debug("Recorder was shut down with status: {}. "
-                      + "\tMessage: {}".format(status, message))
-    else:
-        logging.debug("Recorder was shut down with status: {}".format(status))
-
-    if(status == 1):
-        messagebox.showerror("Error", "An unexpected error has occurred.\n"
-                             + "Please check the debug log for more details.")
-    exit(status)
+def delete_cfg_command():
+    # Found this nice piece of code for deleting the last
+    # line in large files on stackoverflow. kudos to Saqib and co
+    # This code is to remove the AutoRecorder command that was
+    # appended to the end of the autoexec.cfg at startup
+    logging.debug(
+        "Deleting progammatically added line from autoexec...")
+    with open(autoexec_path, "r+") as file:
+        file.seek(0, os.SEEK_END)
+        pos = file.tell() - 1
+        while pos > 0 and file.read(1) != "\n":
+            pos -= 1
+            file.seek(pos, os.SEEK_SET)
+        if pos > 0:
+            file.seek(pos, os.SEEK_SET)
+            file.truncate()
+    logging.debug("Line deleted.")
 
 
 while need_path:
@@ -132,10 +161,36 @@ if (not os.path.isdir(path_to_demos)):
     logging.debug("Path to demos did not exist. Path was created.")
 
 autoexec_path = Path(path_to_l4d2 + "cfg/autoexec.cfg")
-with open(autoexec_path, "a") as autoexec:
-    autoexec.write("alias +showexec \"+showscores;"
-                   + " exec L4D2AutoRecorder.cfg\"; alias -showexec"
-                   + " \"-showscores\"; bind TAB +showexec")
+
+# Check if AutoRecorder failed to close correctly and left garbage
+cfg_command = "alias +showexec \"+showscores;" \
+    + " exec L4D2AutoRecorder.cfg\"; alias -showexec" \
+    + " \"-showscores\"; bind TAB +showexec"
+
+flag_path = Path("__autorecorder_flag")
+
+if (os.path.isfile(flag_path)):
+    logging.debug(
+        "L4D2AutoRecorder did not shut down correctly. Running clean-up.")
+    move_and_archive()
+
+    # The whole point of this block is to make sure
+    # the cfg command is the last line in the autoexec
+    exec_temp = []
+    with open(autoexec_path, "r") as autoexec:
+        for line in autoexec:
+            if (line != (cfg_command + "\n")):
+                exec_temp.append(line.rstrip('\n'))
+        exec_temp.append(cfg_command)
+    with open(autoexec_path, "w") as autoexec:
+        for line in exec_temp:
+            autoexec.write("{}\n".format(line))
+else:
+    with open(flag_path, "w") as flag:
+        logging.debug("Startup flag successfully created.")
+
+    with open(autoexec_path, "a") as autoexec:
+        autoexec.write(cfg_command)
 
 
 subprocess.Popen("start steam://rungameid/550", shell=True)
@@ -143,30 +198,26 @@ subprocess.Popen("start steam://rungameid/550", shell=True)
 logging.debug("attempted to start Left 4 Dead 2 via"
               + " 'start' steam id on the shell")
 
-time.sleep(1)
-
+time.sleep(5)
+detected = False
 pythons_psutil = []
 
 for p in psutil.process_iter():
     try:
         if p.name() == 'left4dead2.exe':
+            detected = True
             wrap_left4dead2_demos(p)
-
-            # Found this nice piece of code for deleting the last
-            # line in large files on stackoverflow. kudos to Saqib and co
-            # This code is to remove the AutoRecorder command that was
-            # appended to the end of the autoexec.cfg at startup
-            logging.debug(
-                "Deleting progammatically added line from autoexec...")
-            with open(autoexec_path, "r+") as file:
-                file.seek(0, os.SEEK_END)
-                pos = file.tell() - 1
-                while pos > 0 and file.read(1) != "\n":
-                    pos -= 1
-                    file.seek(pos, os.SEEK_SET)
-                if pos > 0:
-                    file.seek(pos, os.SEEK_SET)
-                    file.truncate()
-            logging.debug("Line deleted.")
+            move_and_archive(True)
+            delete_cfg_command()
     except psutil.Error:
         pass
+
+os.remove("__autorecorder_flag")
+logging.debug("Startup flag was successfully removed.")
+
+if (not detected):
+    shutdown_recorder(
+        1,
+        "Did not detect the left4dead2.exe process. Shutting Down.",
+        True
+    )
