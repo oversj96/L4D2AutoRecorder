@@ -1,2 +1,6 @@
 pathinfo.txt
 debug.log
+build/
+dist/
+__pycache__
+L4D2AutoRecorder.spec

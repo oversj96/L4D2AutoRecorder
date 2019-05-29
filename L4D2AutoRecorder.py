@@ -36,6 +36,7 @@ while need_path:
 
         else:
             if (path_to_exe == ''):
+                logging.debug("Cancel selected, shutting down.")
                 exit(0)
             else:
                 messagebox.showerror(
