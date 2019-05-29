@@ -105,8 +105,10 @@ def move_and_archive(verbose=False):
 def delete_cfg_command():
     # Found this nice piece of code for deleting the last
     # line in large files on stackoverflow. kudos to Saqib and co
-    # This code is to remove the AutoRecorder command that was
-    # appended to the end of the autoexec.cfg at startup
+    """
+    TRemoves the AutoRecorder command that was
+    appended to the end of the autoexec.cfg at startup
+    """
     logging.debug(
         "Deleting progammatically added line from autoexec...")
     with open(autoexec_path, "r+") as file:
