@@ -102,25 +102,13 @@ def move_and_archive(verbose=False):
                     + "to \"" + path_to_demos + "\".")
 
 
-def delete_cfg_command():
+def delete_cfg_command(path):
     # Found this nice piece of code for deleting the last
     # line in large files on stackoverflow. kudos to Saqib and co
     """
     TRemoves the AutoRecorder command that was
     appended to the end of the autoexec.cfg at startup
     """
-    logging.debug(
-        "Deleting progammatically added line from autoexec...")
-    with open(autoexec_path, "r+") as file:
-        file.seek(0, os.SEEK_END)
-        pos = file.tell() - 1
-        while pos > 0 and file.read(1) != "\n":
-            pos -= 1
-            file.seek(pos, os.SEEK_SET)
-        if pos > 0:
-            file.seek(pos, os.SEEK_SET)
-            file.truncate()
-    logging.debug("Line deleted.")
 
 
 while need_path:
@@ -165,10 +153,6 @@ if (not os.path.isdir(path_to_demos)):
 autoexec_path = Path(path_to_l4d2 + "cfg/autoexec.cfg")
 
 # Check if AutoRecorder failed to close correctly and left garbage
-cfg_command = "alias +showexec \"+showscores;" \
-    + " exec L4D2AutoRecorder.cfg\"; alias -showexec" \
-    + " \"-showscores\"; bind TAB +showexec"
-
 flag_path = Path("__autorecorder_flag")
 
 if (os.path.isfile(flag_path)):
@@ -178,23 +162,24 @@ if (os.path.isfile(flag_path)):
 
     # The whole point of this block is to make sure
     # the cfg command is the last line in the autoexec
-    exec_temp = []
-    with open(autoexec_path, "r") as autoexec:
-        for line in autoexec:
-            if (line != (cfg_command + "\n")):
-                exec_temp.append(line.rstrip('\n'))
-        exec_temp.append(cfg_command)
-    with open(autoexec_path, "w") as autoexec:
-        for line in exec_temp:
-            autoexec.write("{}\n".format(line))
 else:
     with open(flag_path, "w") as flag:
         logging.debug("Startup flag successfully created.")
 
-    with open(autoexec_path, "a") as autoexec:
-        autoexec.write(cfg_command)
+cfg_command = "alias +showexec \"+showscores;" \
+    + " exec L4D2AutoRecorder.cfg\"; alias -showexec" \
+    + " \"-showscores\"; bind TAB +showexec"
 
-
+exec_temp = []
+with open(autoexec_path, "r") as autoexec:
+    for line in autoexec:
+        if (line.strip('\n') != cfg_command):
+            exec_temp.append(line.rstrip('\n'))
+    exec_temp.append(cfg_command)
+with open(autoexec_path, "w") as autoexec:
+    for line in exec_temp:
+        autoexec.write("{}\n".format(line))
+            
 subprocess.Popen("start steam://rungameid/550", shell=True)
 
 logging.debug("attempted to start Left 4 Dead 2 via"
@@ -210,9 +195,20 @@ for p in psutil.process_iter():
             detected = True
             wrap_left4dead2_demos(p)
             move_and_archive(True)
-            delete_cfg_command()
     except psutil.Error:
         pass
+
+logging.debug(
+    "Deleting progammatically added line from autoexec...")
+
+with open(autoexec_path, "r") as file:
+    lines = file.readlines()
+    lines = lines[:-1]
+with open(autoexec_path, "w") as file:
+    for line in lines:
+        file.write(line)
+
+logging.debug("Line deleted.")
 
 os.remove("__autorecorder_flag")
 logging.debug("Startup flag was successfully removed.")
