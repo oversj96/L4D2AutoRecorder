@@ -28,7 +28,7 @@ def wrap_left4dead2_demos(p):
     """
     print("PLEASE DO NOT CLOSE THIS WINDOW UNLESS"
           + " IT HAS BEEN SOME TIME SINCE L4D2 HAS QUIT.")
-    
+
     while (psutil.pid_exists(p.pid)):
         with open(path_to_record_cfg, "w") as cfg:
             stamp = str(datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
@@ -97,15 +97,6 @@ def move_and_archive(verbose=False):
                     + "to \"" + path_to_demos + "\".")
 
 
-def delete_cfg_command(path):
-    # Found this nice piece of code for deleting the last
-    # line in large files on stackoverflow. kudos to Saqib and co
-    """
-    TRemoves the AutoRecorder command that was
-    appended to the end of the autoexec.cfg at startup
-    """
-
-
 while need_path:
     try:
         settings = Path("pathinfo.txt")
@@ -148,16 +139,12 @@ if (not os.path.isdir(path_to_demos)):
 
 autoexec_path = Path(path_to_l4d2 + "cfg/autoexec.cfg")
 
-# Check if AutoRecorder failed to close correctly and left garbage
+# Check if AutoRecorder failed to close correctly and left old demos
 flag_path = Path("__autorecorder_flag")
-
 if (os.path.isfile(flag_path)):
     logging.debug(
-        "L4D2AutoRecorder did not shut down correctly. Running clean-up.")
+        "L4D2AutoRecorder did not shut down correctly.")
     move_and_archive()
-
-    # The whole point of this block is to make sure
-    # the cfg command is the last line in the autoexec
 else:
     with open(flag_path, "w") as flag:
         logging.debug("Startup flag successfully created.")
@@ -166,6 +153,8 @@ cfg_command = "alias +showexec \"+showscores;" + \
     " exec L4D2AutoRecorder.cfg\"; alias -showexec" + \
     " \"-showscores\"; bind TAB +showexec;"
 
+# The whole point of this block is to make sure
+# the cfg command is the last line in the autoexec
 exec_temp = []
 with open(autoexec_path, "r") as autoexec:
     for line in autoexec:
